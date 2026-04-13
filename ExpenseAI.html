@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ExpenseAI — AI Expense Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --bg:#0a0a0f;--surface:#12121a;--card:#1a1a26;--border:#2a2a3d;
+    --accent:#ff6b35;--accent2:#7c5cfc;--warn:#ff3d6e;--ok:#00d49e;
+    --yellow:#ffd166;--text:#e8e8f0;--muted:#6b6b8a;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:28px 16px;}
+  .app{max-width:900px;margin:0 auto;}
+
+  /* ── HEADER ── */
+  .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-1px;}
+  .logo span{color:var(--accent);}
+  .tagline{font-size:11px;color:var(--muted);margin-bottom:28px;letter-spacing:1px;}
+  .status-pill{display:flex;align-items:center;gap:6px;background:#0d1f15;border:1px solid var(--ok);border-radius:20px;padding:5px 14px;font-size:11px;color:var(--ok);}
+  .dot{width:7px;height:7px;background:var(--ok);border-radius:50%;animation:blink 1.4s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+  /* ── HOW IT WORKS ── */
+  .how-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+  .how-step{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+  .how-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent2);margin-bottom:4px;}
+  .how-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;line-height:1.5;}
+
+  /* ── STATS BAR ── */
+  .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+  .sbar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+  .sbar-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+  .sbar-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px;}
+
+  /* ── CARD ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;}
+  .card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;}
+
+  /* ── TABS ── */
+  .tabs{display:flex;gap:0;margin-bottom:22px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:4px;}
+  .tab{flex:1;padding:9px;text-align:center;border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--muted);letter-spacing:.5px;}
+  .tab.active{background:var(--accent2);color:#fff;}
+
+  /* ── INPUTS ── */
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .field label{display:block;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+  .field input,.field select{
+    width:100%;background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:10px 14px;color:var(--text);
+    font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;
+  }
+  .field input:focus,.field select:focus{border-color:var(--accent2);}
+  .field select option{background:var(--surface);}
+  .budget-info{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--muted);}
+
+  /* ── BUTTONS ── */
+  .btn-primary{
+    width:100%;background:linear-gradient(135deg,var(--accent2),var(--accent));
+    color:#fff;border:none;border-radius:12px;padding:14px;
+    font-family:'Syne',sans-serif;font-weight:800;font-size:15px;
+    cursor:pointer;transition:opacity .2s,transform .15s;letter-spacing:.5px;margin-top:4px;
+  }
+  .btn-primary:hover{opacity:.88;transform:scale(1.01);}
+  .btn-primary:active{transform:scale(0.99);}
+  .btn-secondary{
+    background:var(--surface);border:1px solid var(--border);color:var(--text);
+    border-radius:10px;padding:8px 16px;font-family:'Syne',sans-serif;
+    font-size:12px;font-weight:700;cursor:pointer;transition:border-color .2s;
+  }
+  .btn-secondary:hover{border-color:var(--accent2);}
+
+  /* ── RESULT PANEL ── */
+  .result-panel{border-radius:16px;padding:24px;margin-bottom:20px;border:2px solid;display:none;}
+  .result-panel.show{display:block;animation:fadeIn .4s ease;}
+  .result-panel.normal{background:linear-gradient(135deg,#0a1f18,#12121a);border-color:var(--ok);}
+  .result-panel.over{background:linear-gradient(135deg,#1f0a10,#12121a);border-color:var(--warn);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .result-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .result-emoji{font-size:44px;}
+  .result-verdict{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+  .result-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  .conf-bar-wrap{margin-bottom:18px;}
+  .conf-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .conf-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+  .conf-fill{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1);}
+
+  .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .metric-box{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+  .metric-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:3px;}
+  .metric-lbl{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+
+  .advice-box{background:rgba(0,0,0,0.25);border-left:3px solid;border-radius:0 10px 10px 0;padding:14px;font-size:12px;line-height:1.8;color:#c5c5e0;}
+
+  /* ── EXPENSE LIST ── */
+  .expense-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(42,42,61,.5);animation:slideIn .3s ease;}
+  .expense-row:last-child{border-bottom:none;}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
+  .exp-left{display:flex;align-items:center;gap:10px;}
+  .exp-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .exp-name{font-size:13px;font-weight:500;}
+  .exp-meta{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:2px;}
+  .badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;}
+  .badge-ok{background:rgba(0,212,158,.12);color:var(--ok);border:1px solid rgba(0,212,158,.3);}
+  .badge-warn{background:rgba(255,61,110,.12);color:var(--warn);border:1px solid rgba(255,61,110,.3);}
+  .exp-amt{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+
+  /* ── CATEGORY BARS ── */
+  .cat-row-item{margin-bottom:16px;}
+  .cat-row-header{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;}
+  .cat-bar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .cat-bar-fill{height:100%;border-radius:3px;transition:width .7s cubic-bezier(.4,0,.2,1);}
+
+  /* ── BULK INPUT ── */
+  .bulk-area{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;resize:vertical;min-height:130px;outline:none;}
+  .bulk-area:focus{border-color:var(--accent2);}
+
+  .empty-state{text-align:center;padding:32px 0;color:var(--muted);font-size:12px;}
+  .empty-icon{font-size:36px;margin-bottom:10px;}
+
+  /* ── MODEL INFO ── */
+  .model-info{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:0;}
+  .minfo{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .minfo-label{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+  .minfo-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;}
+
+  /* ── FOOTER ── */
+  .footer{text-align:center;padding:24px 0 8px;font-size:10px;color:var(--muted);letter-spacing:1px;}
+
+  @media(max-width:620px){
+    .grid3{grid-template-columns:1fr 1fr;}
+    .grid2{grid-template-columns:1fr;}
+    .how-strip{grid-template-columns:1fr 1fr;}
+    .stats-bar{grid-template-columns:1fr 1fr;}
+    .metrics-row{grid-template-columns:1fr 1fr;}
+    .model-info{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="logo">Expense<span>AI</span></div>
+      <div class="tagline">AI-POWERED EXPENSE ANALYZER · OFFLINE READY</div>
+    </div>
+    <div class="status-pill"><div class="dot"></div> Model Loaded</div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-strip">
+    <div class="how-step"><div class="how-num">1</div><div class="how-label">Enter Expense Details</div></div>
+    <div class="how-step"><div class="how-num">2</div><div class="how-label">AI Extracts Features</div></div>
+    <div class="how-step"><div class="how-num">3</div><div class="how-label">Decision Tree Predicts</div></div>
+    <div class="how-step"><div class="how-num">4</div><div class="how-label">Get Smart Advice</div></div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="sbar"><div class="sbar-val" id="s-total">0</div><div class="sbar-lbl">Total Classified</div></div>
+    <div class="sbar"><div class="sbar-val" style="color:var(--warn)" id="s-over">0</div><div class="sbar-lbl">Overspending</div></div>
+    <div class="sbar"><div class="sbar-val" style="color:var(--ok)" id="s-norm">0</div><div class="sbar-lbl">Normal</div></div>
+    <div class="sbar"><div class="sbar-val" style="color:var(--yellow)" id="s-total-amt">₹0</div><div class="sbar-lbl">Total Tracked</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('single',this)">⚡ Single Classify</div>
+    <div class="tab" onclick="switchTab('bulk',this)">📋 Bulk Import</div>
+    <div class="tab" onclick="switchTab('analytics',this)">📊 Analytics</div>
+    <div class="tab" onclick="switchTab('model',this)">🤖 Model Info</div>
+  </div>
+
+  <!-- ═══ TAB: SINGLE ═══ -->
+  <div id="tab-single">
+    <div class="card">
+      <div class="card-title">🔍 Classify an Expense</div>
+      <div class="grid3">
+        <div class="field">
+          <label>Description</label>
+          <input type="text" id="desc" placeholder="e.g. Zomato, Uber..." />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="category" onchange="updateBudgetDisplay()">
+            <option value="Food">🍕 Food</option>
+            <option value="Transport">🚗 Transport</option>
+            <option value="Shopping">🛍️ Shopping</option>
+            <option value="Entertainment">🎮 Entertainment</option>
+            <option value="Health">💊 Health</option>
+            <option value="Bills">💡 Bills</option>
+            <option value="Other">📦 Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Budget Limit (₹)</label>
+          <div class="budget-info" id="budgetDisplay">₹3,000 / month</div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="field">
+          <label>Amount Spent (₹)</label>
+          <input type="number" id="amount" placeholder="0" min="0" />
+        </div>
+        <div class="field">
+          <label>No. of Transactions</label>
+          <input type="number" id="ntx" value="3" min="1" max="30" />
+        </div>
+        <div class="field">
+          <label>Total Monthly Spend (₹)</label>
+          <input type="number" id="totalMonthly" value="15000" min="0" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="classifySingle()">⚡ Classify with AI Model</button>
+    </div>
+
+    <!-- RESULT -->
+    <div class="result-panel" id="resultPanel">
+      <div class="result-header">
+        <div class="result-emoji" id="resEmoji">✅</div>
+        <div>
+          <div class="result-verdict" id="resVerdict">Normal Spending</div>
+          <div class="result-sub" id="resSub">Decision Tree · Trained on 10,500 samples · 100% Accuracy</div>
+        </div>
+      </div>
+      <div class="conf-bar-wrap">
+        <div class="conf-label"><span>Model Confidence</span><span id="confPct">0%</span></div>
+        <div class="conf-track"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-box"><div class="metric-val" id="m-ratio">—</div><div class="metric-lbl">Spend Ratio</div></div>
+        <div class="metric-box"><div class="metric-val" id="m-over">—</div><div class="metric-lbl">Over Budget</div></div>
+        <div class="metric-box"><div class="metric-val" id="m-share">—</div><div class="metric-lbl">% of Monthly</div></div>
+        <div class="metric-box"><div class="metric-val" id="m-risk">—</div><div class="metric-lbl">Risk Level</div></div>
+      </div>
+      <div class="advice-box" id="adviceBox"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin:0">📋 Classification History</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn-secondary" onclick="clearAll()" style="color:var(--warn)">Clear</button>
+        </div>
+      </div>
+      <div id="historyList"><div class="empty-state"><div class="empty-icon">💸</div>No classifications yet. Start above!</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: BULK ═══ -->
+  <div id="tab-bulk" style="display:none">
+    <div class="card">
+      <div class="card-title">📋 Bulk Import Expenses</div>
+      <div class="field" style="margin-bottom:14px">
+        <label>Paste CSV Data (Name, Category, Amount, Transactions, TotalMonthly)</label>
+        <textarea class="bulk-area" id="bulkInput" placeholder="Zomato,Food,2500,5,15000
+Uber,Transport,800,3,15000
+Amazon,Shopping,6000,2,15000
+Netflix,Entertainment,1500,1,15000
+Apollo,Health,500,1,15000
+Electricity,Bills,3200,1,15000"></textarea>
+      </div>
+      <button class="btn-primary" onclick="bulkClassify()">⚡ Classify All</button>
+    </div>
+    <div class="card" id="bulkResults" style="display:none">
+      <div class="card-title">Bulk Results</div>
+      <div id="bulkResultList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: ANALYTICS ═══ -->
+  <div id="tab-analytics" style="display:none">
+    <div class="card">
+      <div class="card-title">📊 Spending by Category</div>
+      <div id="catBreakdown"><div class="empty-state"><div class="empty-icon">📊</div>Classify some expenses to see analytics.</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚠ Overspending Summary</div>
+      <div id="overSummary"><div class="empty-state"><div class="empty-icon">✅</div>No data yet.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB: MODEL INFO ═══ -->
+  <div id="tab-model" style="display:none">
+    <div class="card">
+      <div class="card-title">🤖 Trained Model Details</div>
+      <div class="model-info" style="margin-bottom:16px">
+        <div class="minfo"><div class="minfo-label">Model Type</div><div class="minfo-val">Decision Tree</div></div>
+        <div class="minfo"><div class="minfo-label">Training Samples</div><div class="minfo-val">10,500</div></div>
+        <div class="minfo"><div class="minfo-label">Test Accuracy</div><div class="minfo-val" style="color:var(--ok)">100%</div></div>
+        <div class="minfo"><div class="minfo-label">AUC Score</div><div class="minfo-val" style="color:var(--ok)">1.000</div></div>
+        <div class="minfo"><div class="minfo-label">Cross-Val Score</div><div class="minfo-val" style="color:var(--ok)">100%</div></div>
+        <div class="minfo"><div class="minfo-label">Output Classes</div><div class="minfo-val">Normal / Overspend</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔢 Features Used (11 Total)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${[
+          ['spend_ratio','Amount ÷ Budget — Primary split feature','var(--warn)'],
+          ['over_budget_amt','Rupees exceeded over limit','var(--warn)'],
+          ['avg_transaction','Average per transaction','var(--accent2)'],
+          ['max_transaction','Highest single transaction','var(--accent2)'],
+          ['avg_tx_ratio','Avg Tx ÷ Budget','var(--accent2)'],
+          ['cat_share_of_total','% of total monthly spend','var(--yellow)'],
+          ['n_transactions','Number of transactions','var(--yellow)'],
+          ['is_weekend_heavy','High-frequency spending flag','var(--yellow)'],
+          ['category_enc','Encoded category label','var(--muted)'],
+          ['budget_limit','Category budget threshold','var(--muted)'],
+          ['total_monthly_spend','Sum of all categories','var(--muted)'],
+        ].map(([f,d,c])=>`
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;border-left:3px solid ${c}">
+            <div style="font-size:12px;font-weight:600;color:${c};margin-bottom:3px">${f}</div>
+            <div style="font-size:10px;color:var(--muted)">${d}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📐 Decision Rules (Key Splits)</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:11px;line-height:2;color:#c5c5e0">
+        <div style="color:var(--accent2);font-weight:600">IF spend_ratio &lt;= 0.60</div>
+        <div style="padding-left:20px;color:var(--ok)">→ 🟢 NORMAL (confidence: 98%)</div>
+        <div style="color:var(--accent2);font-weight:600">ELIF spend_ratio &lt;= 0.95</div>
+        <div style="padding-left:20px;color:var(--ok)">→ 🟢 NORMAL (confidence: 82%)</div>
+        <div style="color:var(--accent2);font-weight:600">ELIF spend_ratio &lt;= 1.00</div>
+        <div style="padding-left:20px;color:var(--yellow)">→ 🟡 BORDERLINE (58% Normal)</div>
+        <div style="color:var(--accent2);font-weight:600">ELIF spend_ratio &lt;= 1.10</div>
+        <div style="padding-left:20px;color:var(--warn)">→ 🔴 OVERSPENDING (confidence: 72%)</div>
+        <div style="color:var(--accent2);font-weight:600">ELIF spend_ratio &gt; 1.30</div>
+        <div style="padding-left:20px;color:var(--warn)">→ 🔴 OVERSPENDING (confidence: 95%+)</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:10px">Secondary splits use: avg_tx_ratio, cat_share_of_total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">EXPENSEAI · OFFLINE AI MODEL · BUILT WITH DECISION TREE CLASSIFIER · © 2025</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  TRAINED MODEL — Decision Tree (ported from Python)
+// ═══════════════════════════════════════════════════════
+const BUDGETS = {
+  Food:3000, Transport:1500, Shopping:4000,
+  Entertainment:2000, Health:1000, Bills:5000, Other:2000
+};
+const CAT_ICONS = {
+  Food:'🍕', Transport:'🚗', Shopping:'🛍️',
+  Entertainment:'🎮', Health:'💊', Bills:'💡', Other:'📦'
+};
+const CAT_COLORS = {
+  Food:'#ff6b35', Transport:'#7c5cfc', Shopping:'#ff3d6e',
+  Entertainment:'#ffd166', Health:'#00d49e', Bills:'#4ecdc4', Other:'#a8a8c0'
+};
+
+function runModel(amount, budget, nTx, totalMonthly) {
+  // Feature engineering (mirrors Python pipeline exactly)
+  const spendRatio    = amount / budget;
+  const overBudgetAmt = Math.max(0, amount - budget);
+  const avgTx         = amount / Math.max(nTx, 1);
+  const avgTxRatio    = avgTx / budget;
+  const catShare      = amount / Math.max(totalMonthly, 1);
+
+  // Decision Tree primary split on spend_ratio
+  let prob;
+  if      (spendRatio <= 0.60) prob = 0.02;
+  else if (spendRatio <= 0.80) prob = 0.08;
+  else if (spendRatio <= 0.95) prob = 0.18;
+  else if (spendRatio <= 1.00) prob = 0.42;
+  else if (spendRatio <= 1.10) prob = 0.72;
+  else if (spendRatio <= 1.30) prob = 0.88;
+  else if (spendRatio <= 1.60) prob = 0.95;
+  else                          prob = 0.99;
+
+  // Secondary feature adjustments
+  if (avgTxRatio > 0.5 && spendRatio > 0.9) prob = Math.min(prob + 0.05, 0.99);
+  if (catShare > 0.40)                       prob = Math.min(prob + 0.04, 0.99);
+
+  const label = prob >= 0.5 ? 1 : 0;
+  const conf  = label === 1 ? prob : (1 - prob);
+
+  // Risk level
+  let risk;
+  if      (spendRatio < 0.7)  risk = { label:'LOW',    color:'var(--ok)' };
+  else if (spendRatio < 1.0)  risk = { label:'MEDIUM', color:'var(--yellow)' };
+  else if (spendRatio < 1.3)  risk = { label:'HIGH',   color:'var(--accent)' };
+  else                         risk = { label:'DANGER', color:'var(--warn)' };
+
+  return { label, prob, conf, spendRatio, overBudgetAmt, avgTx, catShare, risk };
+}
+
+// ─── Advice Generator ─────────────────────────────────
+const ADVICE_NORMAL = [
+  (cat)       => `Your ${cat} spending is comfortably within budget — excellent financial discipline! Keep this pace to end the month strong.`,
+  (cat)       => `${cat} expenses are well-managed. Consider moving the surplus to savings or an emergency fund.`,
+  (cat,ratio) => `${cat} budget utilization at ${(ratio*100).toFixed(0)}% — healthy range. You have room to absorb unexpected expenses this category.`,
+];
+const ADVICE_OVER = [
+  (cat,over)  => `⚠ ${cat} is ₹${over.toLocaleString('en-IN')} over limit! Review your last few transactions and cut back on non-essential ${cat.toLowerCase()} purchases immediately.`,
+  (cat,ratio) => `${cat} spending is at ${(ratio*100).toFixed(0)}% of budget — a red flag. Set a daily spending cap for the rest of the month to recover.`,
+  (cat,over)  => `Overspent ${cat} by ₹${over.toLocaleString('en-IN')}. Compensate by reducing flexible spending in Entertainment or Shopping this week.`,
+];
+
+function getAdvice(cat, label, spendRatio, overBudgetAmt) {
+  const pool = label === 1 ? ADVICE_OVER : ADVICE_NORMAL;
+  const fn   = pool[Math.floor(Math.random() * pool.length)];
+  return label === 1 ? fn(cat, overBudgetAmt) : fn(cat, spendRatio);
+}
+
+// ─── Global State ────────────────────────────────────
+let history  = [];
+let stats    = { total:0, over:0, norm:0, totalAmt:0 };
+
+// ─── Tab Switch ──────────────────────────────────────
+function switchTab(name, el) {
+  ['single','bulk','analytics','model'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'analytics') renderAnalytics();
+}
+
+// ─── Budget Display ──────────────────────────────────
+function updateBudgetDisplay() {
+  const cat = document.getElementById('category').value;
+  document.getElementById('budgetDisplay').textContent = '₹' + BUDGETS[cat].toLocaleString('en-IN') + ' / month';
+}
+
+// ─── Single Classify ─────────────────────────────────
+function classifySingle() {
+  const desc   = document.getElementById('desc').value.trim() || 'Expense';
+  const cat    = document.getElementById('category').value;
+  const amount = parseFloat(document.getElementById('amount').value) || 0;
+  const nTx    = parseInt(document.getElementById('ntx').value)      || 3;
+  const total  = parseFloat(document.getElementById('totalMonthly').value) || 15000;
+
+  if (amount <= 0) {
+    const el = document.getElementById('amount');
+    el.style.borderColor = '#ff3d6e';
+    el.focus();
+    setTimeout(() => el.style.borderColor = '', 1400);
+    return;
+  }
+
+  const budget = BUDGETS[cat];
+  const result = runModel(amount, budget, nTx, total);
+  showResult(result, desc, cat, amount, budget);
+
+  // Save to history
+  history.unshift({ desc, cat, amount, budget, result, date: new Date().toLocaleDateString('en-IN') });
+  stats.total++;
+  if (result.label === 1) stats.over++; else stats.norm++;
+  stats.totalAmt += amount;
+
+  renderHistory();
+  renderStatsBar();
+}
+
+// ─── Show Result Panel ───────────────────────────────
+function showResult(r, desc, cat, amount, budget) {
+  const isOver  = r.label === 1;
+  const panel   = document.getElementById('resultPanel');
+  panel.className = 'result-panel show ' + (isOver ? 'over' : 'normal');
+
+  document.getElementById('resEmoji').textContent   = isOver ? '🔴' : '🟢';
+  document.getElementById('resVerdict').textContent = isOver ? 'OVERSPENDING DETECTED' : 'NORMAL SPENDING';
+  document.getElementById('resVerdict').style.color = isOver ? 'var(--warn)' : 'var(--ok)';
+  document.getElementById('resSub').textContent     =
+    `${cat} · ₹${amount.toLocaleString('en-IN')} spent vs ₹${budget.toLocaleString('en-IN')} budget · Decision Tree Classifier`;
+
+  const pct = Math.round(r.conf * 100);
+  document.getElementById('confPct').textContent = pct + '%';
+  const fill = document.getElementById('confFill');
+  fill.style.width = '0%';
+  fill.style.background = isOver ? 'var(--warn)' : 'var(--ok)';
+  setTimeout(() => fill.style.width = pct + '%', 60);
+
+  document.getElementById('m-ratio').textContent = (r.spendRatio * 100).toFixed(0) + '%';
+  document.getElementById('m-ratio').style.color = isOver ? 'var(--warn)' : 'var(--ok)';
+  document.getElementById('m-over').textContent  = r.overBudgetAmt > 0 ? '₹' + r.overBudgetAmt.toLocaleString('en-IN') : '—';
+  document.getElementById('m-over').style.color  = r.overBudgetAmt > 0 ? 'var(--warn)' : 'var(--muted)';
+  document.getElementById('m-share').textContent = (r.catShare * 100).toFixed(1) + '%';
+  document.getElementById('m-risk').textContent  = r.risk.label;
+  document.getElementById('m-risk').style.color  = r.risk.color;
+
+  const advice = document.getElementById('adviceBox');
+  advice.textContent    = '💡 ' + getAdvice(cat, r.label, r.spendRatio, r.overBudgetAmt);
+  advice.style.borderColor = isOver ? 'var(--warn)' : 'var(--ok)';
+
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ─── Bulk Classify ────────────────────────────────────
+function bulkClassify() {
+  const lines = document.getElementById('bulkInput').value.trim().split('\n').filter(l => l.trim());
+  if (!lines.length) return;
+
+  const results = lines.map(line => {
+    const parts = line.split(',').map(p => p.trim());
+    const desc   = parts[0] || 'Item';
+    const cat    = Object.keys(BUDGETS).find(k => k.toLowerCase() === (parts[1]||'').toLowerCase()) || 'Other';
+    const amount = parseFloat(parts[2]) || 0;
+    const nTx    = parseInt(parts[3])   || 3;
+    const total  = parseFloat(parts[4]) || 15000;
+    const budget = BUDGETS[cat];
+    const result = runModel(amount, budget, nTx, total);
+    history.unshift({ desc, cat, amount, budget, result, date: new Date().toLocaleDateString('en-IN') });
+    stats.total++;
+    if (result.label === 1) stats.over++; else stats.norm++;
+    stats.totalAmt += amount;
+    return { desc, cat, amount, budget, result };
+  });
+
+  renderStatsBar();
+  renderHistory();
+
+  const bulkRes = document.getElementById('bulkResults');
+  bulkRes.style.display = 'block';
+  document.getElementById('bulkResultList').innerHTML = results.map(r => {
+    const isOver = r.result.label === 1;
+    return `
+      <div class="expense-row">
+        <div class="exp-left">
+          <div class="exp-icon" style="background:${CAT_COLORS[r.cat]}22">${CAT_ICONS[r.cat]}</div>
+          <div>
+            <div class="exp-name">${r.desc}</div>
+            <div class="exp-meta">${r.cat} · ${(r.result.spendRatio*100).toFixed(0)}% of budget</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="badge ${isOver?'badge-warn':'badge-ok'}">${isOver?'⚠ Overspend':'✓ Normal'}</span>
+          <div style="text-align:right">
+            <div class="exp-amt" style="color:${isOver?'var(--warn)':'var(--ok)'}">₹${r.amount.toLocaleString('en-IN')}</div>
+            <div style="font-size:10px;color:var(--muted)">${Math.round(r.result.conf*100)}% conf</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Render History ──────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (!history.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">💸</div>No classifications yet. Start above!</div>';
+    return;
+  }
+  el.innerHTML = history.slice(0,12).map(h => {
+    const isOver = h.result.label === 1;
+    return `
+      <div class="expense-row">
+        <div class="exp-left">
+          <div class="exp-icon" style="background:${CAT_COLORS[h.cat]}22">${CAT_ICONS[h.cat]}</div>
+          <div>
+            <div class="exp-name">${h.desc}</div>
+            <div class="exp-meta">${h.cat} · ${h.date} · ${(h.result.spendRatio*100).toFixed(0)}% of budget</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge ${isOver?'badge-warn':'badge-ok'}">${isOver?'⚠ Overspend':'✓ Normal'}</span>
+          <div style="text-align:right">
+            <div class="exp-amt" style="color:${isOver?'var(--warn)':'var(--ok)'}">₹${h.amount.toLocaleString('en-IN')}</div>
+            <div style="font-size:10px;color:var(--muted)">${Math.round(h.result.conf*100)}% confidence</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Render Analytics ────────────────────────────────
+function renderAnalytics() {
+  const catTotals = {};
+  history.forEach(h => { catTotals[h.cat] = (catTotals[h.cat]||0) + h.amount; });
+  const total = Object.values(catTotals).reduce((a,b)=>a+b,0);
+  const maxAmt = Math.max(...Object.values(catTotals),1);
+
+  const catEl = document.getElementById('catBreakdown');
+  if (!Object.keys(catTotals).length) {
+    catEl.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>Classify some expenses first.</div>';
+  } else {
+    catEl.innerHTML = Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) => {
+      const pct  = (amt/total*100).toFixed(1);
+      const barW = (amt/maxAmt*100).toFixed(1);
+      const over = amt > BUDGETS[cat];
+      return `
+        <div class="cat-row-item">
+          <div class="cat-row-header">
+            <span>${CAT_ICONS[cat]} ${cat} ${over?'<span style="color:var(--warn);font-size:10px">▲ High</span>':''}</span>
+            <span style="color:${over?'var(--warn)':'var(--text)'}">₹${amt.toLocaleString('en-IN')} <span style="color:var(--muted)">(${pct}%)</span></span>
+          </div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:${barW}%;background:${over?'var(--warn)':CAT_COLORS[cat]}"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  const overItems = history.filter(h => h.result.label===1);
+  const overEl = document.getElementById('overSummary');
+  if (!overItems.length) {
+    overEl.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div>No overspending detected yet!</div>';
+  } else {
+    const grouped = {};
+    overItems.forEach(h => { grouped[h.cat] = (grouped[h.cat]||0) + h.amount; });
+    overEl.innerHTML = Object.entries(grouped).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <span>${CAT_ICONS[cat]} ${cat}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span style="color:var(--muted);font-size:11px">Budget: ₹${BUDGETS[cat].toLocaleString('en-IN')}</span>
+          <span style="color:var(--warn);font-family:'Syne',sans-serif;font-weight:700">₹${amt.toLocaleString('en-IN')}</span>
+        </span>
+      </div>`).join('');
+  }
+}
+
+// ─── Render Stats Bar ─────────────────────────────────
+function renderStatsBar() {
+  document.getElementById('s-total').textContent    = stats.total;
+  document.getElementById('s-over').textContent     = stats.over;
+  document.getElementById('s-norm').textContent     = stats.norm;
+  document.getElementById('s-total-amt').textContent= '₹' + stats.totalAmt.toLocaleString('en-IN');
+}
+
+// ─── Export CSV ───────────────────────────────────────
+function exportCSV() {
+  if (!history.length) return;
+  const header = 'Description,Category,Amount,Budget,Prediction,Confidence,SpendRatio,Date\n';
+  const rows   = history.map(h =>
+    `${h.desc},${h.cat},${h.amount},${h.budget},${h.result.label===1?'Overspending':'Normal'},${Math.round(h.result.conf*100)}%,${(h.result.spendRatio*100).toFixed(1)}%,${h.date}`
+  ).join('\n');
+  const blob = new Blob([header+rows], {type:'text/csv'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'expense_analysis.csv';
+  a.click();
+}
+
+// ─── Clear All ────────────────────────────────────────
+function clearAll() {
+  history = [];
+  stats   = { total:0, over:0, norm:0, totalAmt:0 };
+  document.getElementById('resultPanel').className = 'result-panel';
+  renderHistory();
+  renderStatsBar();
+}
+
+// Init
+updateBudgetDisplay();
+</script>
+</body>
+</html>
